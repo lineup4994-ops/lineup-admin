@@ -9,7 +9,10 @@ const GoogleSheetsSync = {
   scriptUrl: DEFAULT_SCRIPT_URL,
   isConnected: false,
   isSyncing: false,
+  isPulling: false,
   syncTimeout: null,
+  pollInterval: null,
+  lastCloudUpdatedAt: null,
 
   init() {
     this.loadSavedUrl();
@@ -17,7 +20,9 @@ const GoogleSheetsSync = {
     this.bindEvents();
 
     if (this.scriptUrl) {
-      this.testConnection(false);
+      this.pullFromGoogleSheets(false).then(() => {
+        this.startRealtimePolling();
+      });
     }
   },
 
@@ -30,16 +35,18 @@ const GoogleSheetsSync = {
     } else {
       this.scriptUrl = saved;
     }
+    this.lastCloudUpdatedAt = localStorage.getItem('lineup_last_cloud_updated_at') || null;
   },
 
   bindEvents() {
-    // Auto-sync when local data updates (debounced by 3 seconds)
+    // Auto-sync when local data updates (debounced by 1.5 seconds for near-realtime)
     const debouncedSync = () => {
-      if (this.isConnected && !this.isSyncing) {
+      if (this.isPulling) return; // Do not push back data that was just pulled from cloud
+      if (this.scriptUrl && !this.isSyncing) {
         clearTimeout(this.syncTimeout);
         this.syncTimeout = setTimeout(() => {
           this.syncAllToGoogleSheets(false);
-        }, 3000);
+        }, 1500);
       }
     };
 
@@ -47,6 +54,97 @@ const GoogleSheetsSync = {
     window.addEventListener('lineup:inventory-updated', debouncedSync);
     window.addEventListener('lineup:customers-updated', debouncedSync);
     window.addEventListener('lineup:events-updated', debouncedSync);
+
+    // Pull immediately when user switches back to this tab/app on phone or desktop
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && this.scriptUrl && !this.isSyncing) {
+        this.pullFromGoogleSheets(false);
+      }
+    });
+  },
+
+  startRealtimePolling() {
+    if (this.pollInterval) clearInterval(this.pollInterval);
+    // Poll every 10 seconds to keep Desktop & Mobile in sync automatically
+    this.pollInterval = setInterval(() => {
+      if (document.visibilityState === 'visible' && this.scriptUrl && !this.isSyncing && !this.isPulling) {
+        this.checkAndPullUpdates();
+      }
+    }, 10000);
+  },
+
+  async checkAndPullUpdates() {
+    try {
+      const response = await fetch(`${this.scriptUrl}?action=ping&t=${Date.now()}`);
+      const text = await response.text();
+      const res = JSON.parse(text);
+      if (res.status === 'success') {
+        this.isConnected = true;
+        this.updateStatusPill();
+        if (res.updatedAt && res.updatedAt !== this.lastCloudUpdatedAt) {
+          await this.pullFromGoogleSheets(false);
+        }
+      }
+    } catch (e) {
+      // Ignore silent polling errors
+    }
+  },
+
+  /**
+   * ดึงข้อมูลล่าสุดจาก Google Sheets ลงมาที่เครื่อง (สำหรับซิงค์ระหว่างคอมและมือถือ)
+   */
+  async pullFromGoogleSheets(showToast = false) {
+    if (!this.scriptUrl || this.isSyncing || this.isPulling) return;
+    this.isPulling = true;
+
+    try {
+      const response = await fetch(`${this.scriptUrl}?action=getAll&t=${Date.now()}`);
+      const text = await response.text();
+      const result = JSON.parse(text);
+
+      if (result.status === 'success' && result.data) {
+        this.isConnected = true;
+        this.updateStatusPill();
+
+        const d = result.data;
+        const hasCloudData =
+          (Array.isArray(d.bookings) && d.bookings.length > 0 && d.bookings[0].id) ||
+          (Array.isArray(d.inventory) && d.inventory.length > 0 && d.inventory[0].id);
+
+        if (hasCloudData) {
+          if (Array.isArray(d.inventory) && d.inventory.length > 0) {
+            LineUpDB.setInventory(d.inventory);
+          }
+          if (Array.isArray(d.events) && d.events.length > 0) {
+            LineUpDB.setEvents(d.events);
+          }
+          if (Array.isArray(d.bookings)) {
+            LineUpDB.setBookings(d.bookings);
+          }
+          if (Array.isArray(d.customers) && d.customers.length > 0) {
+            LineUpDB.setCustomers(d.customers);
+          }
+
+          if (result.updatedAt) {
+            this.lastCloudUpdatedAt = result.updatedAt;
+            localStorage.setItem('lineup_last_cloud_updated_at', result.updatedAt);
+          }
+
+          if (showToast) {
+            window.App?.showToast('ดึงข้อมูลล่าสุดจาก Cloud ซิงค์เข้าเครื่องเรียบร้อยแล้ว! 🔄', 'success');
+          }
+        } else {
+          // If cloud has no _AppState yet, push initial local data to cloud
+          this.isPulling = false;
+          await this.syncAllToGoogleSheets(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Pull from Google Sheets note:', err);
+    } finally {
+      this.isPulling = false;
+    }
   },
 
   updateStatusPill() {
@@ -186,6 +284,10 @@ const GoogleSheetsSync = {
 
       if (result.status === 'success') {
         this.isConnected = true;
+        if (result.updatedAt) {
+          this.lastCloudUpdatedAt = result.updatedAt;
+          localStorage.setItem('lineup_last_cloud_updated_at', result.updatedAt);
+        }
         this.updateStatusPill();
         if (showToast) {
           window.App?.showToast('ซิงค์ข้อมูลลง Google Sheets สำเร็จเรียบร้อยแล้ว! 📊🎉', 'success');
