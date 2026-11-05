@@ -1,0 +1,149 @@
+/* Line.Up Custom Styles & Color Palette */
+@import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Fredoka:wght@500;600;700&display=swap');
+
+:root {
+  --color-mint-50: #f0fdf9;
+  --color-mint-100: #ccfbf1;
+  --color-mint-200: #99f6e4;
+  --color-mint-400: #2dd4bf;
+  --color-mint-500: #38c29e;
+  --color-mint-600: #2ea888;
+  --color-mint-700: #23856d;
+  --color-mint-900: #134e48;
+  
+  --color-pink-50: #fff1f5;
+  --color-pink-100: #ffe4ec;
+  --color-pink-300: #fca5c2;
+  --color-pink-500: #ff7599;
+  --color-pink-600: #f0547d;
+
+  --color-yellow-400: #facc15;
+  --color-yellow-500: #eab308;
+  --color-yellow-100: #fef9c3;
+  
+  --color-dark-900: #0f172a;
+  --color-dark-800: #1e293b;
+  --color-dark-700: #334155;
+}
+
+body {
+  font-family: 'Prompt', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #1e293b;
+  background-color: #f8fafc;
+  -webkit-font-smoothing: antialiased;
+}
+
+.brand-font {
+  font-family: 'Fredoka', 'Prompt', sans-serif;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Glass & Card Effects */
+.glass-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.mint-glow {
+  box-shadow: 0 4px 20px -2px rgba(56, 194, 158, 0.25);
+}
+
+.pink-glow {
+  box-shadow: 0 4px 20px -2px rgba(255, 117, 153, 0.3);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+/* Calendar Date Cell Specifics */
+.calendar-day-cell {
+  min-height: 110px;
+  transition: all 0.15s ease-in-out;
+}
+.calendar-day-cell:hover {
+  background-color: #f0fdf9;
+  border-color: #99f6e4;
+}
+
+/* Printable Contract Styling */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-contract-modal,
+  #printable-contract-modal * {
+    visibility: visible;
+  }
+  #printable-contract-modal {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: white !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Badge styles */
+.badge-available {
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+.badge-booked {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+.badge-maintenance {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+.badge-vip {
+  background: linear-gradient(135deg, #fef08a 0%, #facc15 100%);
+  color: #713f12;
+  font-weight: 700;
+  border: 1px solid #eab308;
+  box-shadow: 0 2px 4px rgba(234, 179, 8, 0.2);
+}
+.badge-blacklist {
+  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+  color: #ffffff;
+  font-weight: 700;
+  border: 1px solid #dc2626;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
+/* Custom Modal Backdrop */
+.modal-backdrop {
+  background-color: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+}
